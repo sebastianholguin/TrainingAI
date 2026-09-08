@@ -13,12 +13,12 @@ public class EmployeesController(EmployeeDbContext db) : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<EmployeeResponse>>> GetAll()
     {
-        var employees = await db.Employees
-            .OrderBy(e => e.Name)
-            .Select(e => ToResponse(e))
-            .ToListAsync();
+        // Materialise first, then map. Projecting through ToResponse inside the query only
+        // works because the in-memory provider evaluates arbitrary methods client-side;
+        // a relational provider would fail to translate it.
+        var employees = await db.Employees.OrderBy(e => e.Name).ToListAsync();
 
-        return Ok(employees);
+        return Ok(employees.Select(ToResponse));
     }
 
     [HttpGet("{id:int}")]
@@ -184,12 +184,14 @@ public class EmployeesController(EmployeeDbContext db) : ControllerBase
 
     private static void Apply(EmployeeRequest request, Employee employee)
     {
-        employee.Name = request.Name.Trim();
-        employee.Email = request.Email.Trim();
-        employee.NationalId = request.NationalId.Trim();
-        employee.CountryCode = request.CountryCode.Trim();
-        employee.Phone = request.Phone.Trim();
-        employee.Country = request.Country.Trim();
+        // EmployeeRequest trims on assignment, so these are already normalised —
+        // and crucially were normalised before validation and the duplicate check ran.
+        employee.Name = request.Name;
+        employee.Email = request.Email;
+        employee.NationalId = request.NationalId;
+        employee.CountryCode = request.CountryCode;
+        employee.Phone = request.Phone;
+        employee.Country = request.Country;
         employee.Gender = request.Gender;
         employee.DateOfBirth = request.DateOfBirth;
         employee.OfficialTitle = request.OfficialTitle;

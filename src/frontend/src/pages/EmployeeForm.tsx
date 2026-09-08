@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { GraduationCap } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -17,73 +17,98 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { api } from '@/lib/api'
+import { addYearsClamped, parseDateOnly, todayDateOnly } from '@/lib/format'
 import { ApiError, type EmployeeInput, type EmployeeOptions } from '@/lib/types'
 import { cn } from '@/lib/utils'
-
-const MINIMUM_AGE = 18
-
-function yearsAgo(years: number): Date {
-  const date = new Date()
-  date.setFullYear(date.getFullYear() - years)
-  return date
-}
 
 /**
  * Mirrors the backend's rules so users get immediate feedback. The API re-checks
  * everything — this is for responsiveness, not enforcement.
+ *
+ * Built from the rules the API serves (`/employee-options`) rather than from constants
+ * copied into this file, so changing the minimum age or a length cap on the server can't
+ * leave the form quietly enforcing the old one.
  */
-const schema = z
-  .object({
-    name: z.string().trim().min(2, 'Name must be at least 2 characters.'),
-    email: z.string().trim().email('Enter a valid email address.'),
-    nationalId: z.string().trim().min(3, 'National ID is required.'),
-    countryCode: z.string().trim().regex(/^\+\d{1,4}$/, "Use a '+' followed by 1-4 digits."),
-    phone: z.string().trim().min(5, 'Phone number is required.'),
-    country: z.string().trim().min(1, 'Country is required.'),
-    gender: z.string().min(1, 'Select a gender.'),
-    officialTitle: z.string().min(1, 'Select a job title.'),
-    dateOfBirth: z.string().min(1, 'Date of birth is required.'),
-    hireDate: z.string().min(1, 'Hire date is required.'),
-  })
-  .superRefine((values, ctx) => {
-    const birth = new Date(values.dateOfBirth)
-    const hire = new Date(values.hireDate)
-    const today = new Date()
+function buildSchema(rules: EmployeeOptions) {
+  const { minimumAgeYears: minAge, countryCodePattern, maxLengths } = rules
 
-    if (birth >= today) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['dateOfBirth'],
-        message: 'Date of birth must be in the past.',
-      })
-    } else if (birth > yearsAgo(MINIMUM_AGE)) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['dateOfBirth'],
-        message: `Employee must be at least ${MINIMUM_AGE} years old.`,
-      })
-    }
+  return z
+    .object({
+      name: z
+        .string()
+        .trim()
+        .min(2, 'Name must be at least 2 characters.')
+        .max(maxLengths.name, `Name must be at most ${maxLengths.name} characters.`),
+      email: z
+        .string()
+        .trim()
+        .email('Enter a valid email address.')
+        .max(maxLengths.email, `Email must be at most ${maxLengths.email} characters.`),
+      nationalId: z
+        .string()
+        .trim()
+        .min(3, 'National ID must be at least 3 characters.')
+        .max(maxLengths.nationalId, `National ID must be at most ${maxLengths.nationalId} characters.`),
+      countryCode: z
+        .string()
+        .trim()
+        .regex(new RegExp(countryCodePattern), "Use a '+' followed by 1-4 digits."),
+      phone: z
+        .string()
+        .trim()
+        .min(5, 'Phone number must be at least 5 characters.')
+        .max(maxLengths.phone, `Phone number must be at most ${maxLengths.phone} characters.`),
+      country: z
+        .string()
+        .trim()
+        .min(2, 'Country must be at least 2 characters.')
+        .max(maxLengths.country, `Country must be at most ${maxLengths.country} characters.`),
+      gender: z.string().min(1, 'Select a gender.'),
+      officialTitle: z.string().min(1, 'Select a job title.'),
+      dateOfBirth: z.string().min(1, 'Date of birth is required.'),
+      hireDate: z.string().min(1, 'Hire date is required.'),
+    })
+    .superRefine((values, ctx) => {
+      const birth = parseDateOnly(values.dateOfBirth)
+      const hire = parseDateOnly(values.hireDate)
+      const today = todayDateOnly()
+      if (!birth || !hire) return
 
-    if (hire > today) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['hireDate'],
-        message: 'Hire date cannot be in the future.',
-      })
-    }
+      const eighteenthBirthday = addYearsClamped(birth, minAge)
 
-    const eighteenthBirthday = new Date(birth)
-    eighteenthBirthday.setFullYear(birth.getFullYear() + MINIMUM_AGE)
-    if (hire < eighteenthBirthday) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['hireDate'],
-        message: `Hire date cannot be before the employee turned ${MINIMUM_AGE}.`,
-      })
-    }
-  })
+      if (birth >= today) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['dateOfBirth'],
+          message: 'Date of birth must be in the past.',
+        })
+      } else if (eighteenthBirthday > today) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['dateOfBirth'],
+          message: `Employee must be at least ${minAge} years old.`,
+        })
+      }
 
-type FormValues = z.infer<typeof schema>
+      if (hire > today) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['hireDate'],
+          message: 'Hire date cannot be in the future.',
+        })
+      }
+
+      if (hire < eighteenthBirthday) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['hireDate'],
+          message: `Hire date cannot be before the employee turned ${minAge}.`,
+        })
+      }
+    })
+}
+
+type FormValues = z.infer<ReturnType<typeof buildSchema>>
 
 const EMPTY: FormValues = {
   name: '',
@@ -103,8 +128,14 @@ export function EmployeeForm() {
   const { id } = useParams()
   const isEdit = id !== undefined
 
-  const [options, setOptions] = useState<EmployeeOptions>({ genders: [], titles: [] })
-  const [isLoading, setIsLoading] = useState(isEdit)
+  // The form can't be filled in without the server's rules and dropdown values, so it stays
+  // in a loading/error state until they arrive rather than rendering empty selects that can
+  // never satisfy the schema.
+  const [options, setOptions] = useState<EmployeeOptions | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
+  const schema = useMemo(() => (options ? buildSchema(options) : null), [options])
 
   const {
     register,
@@ -114,28 +145,34 @@ export function EmployeeForm() {
     setError,
     watch,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: EMPTY })
+  } = useForm<FormValues>({
+    resolver: schema ? zodResolver(schema) : undefined,
+    defaultValues: EMPTY,
+  })
+
+  const load = useCallback(async () => {
+    setIsLoading(true)
+    setLoadError(null)
+    try {
+      const [fetchedOptions, employee] = await Promise.all([
+        api.getOptions(),
+        isEdit ? api.getEmployee(Number(id)) : Promise.resolve(null),
+      ])
+      setOptions(fetchedOptions)
+      if (employee) {
+        const { id: _id, ...values } = employee
+        reset(values)
+      }
+    } catch (error) {
+      setLoadError(error instanceof ApiError ? error.message : 'Failed to load the form.')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [id, isEdit, reset])
 
   useEffect(() => {
-    async function load() {
-      try {
-        const [fetchedOptions, employee] = await Promise.all([
-          api.getOptions(),
-          isEdit ? api.getEmployee(Number(id)) : Promise.resolve(null),
-        ])
-        setOptions(fetchedOptions)
-        if (employee) {
-          const { id: _id, ...values } = employee
-          reset(values)
-        }
-      } catch (error) {
-        toast.error(error instanceof ApiError ? error.message : 'Failed to load the form.')
-      } finally {
-        setIsLoading(false)
-      }
-    }
     void load()
-  }, [id, isEdit, reset])
+  }, [load])
 
   async function onSubmit(values: FormValues) {
     const payload: EmployeeInput = values
@@ -153,13 +190,26 @@ export function EmployeeForm() {
         // Surface API validation failures on the fields they belong to; the
         // backend keys them by PascalCase property name.
         const entries = Object.entries(error.fieldErrors)
+        const unmapped: string[] = []
         for (const [key, messages] of entries) {
           const field = (key.charAt(0).toLowerCase() + key.slice(1)) as keyof FormValues
           if (field in EMPTY) {
             setError(field, { message: messages.join(' ') })
+          } else {
+            // Keys like "$.dateOfBirth" come from JSON deserialization failures and match
+            // no form field. Without this they'd vanish, leaving a "fix the highlighted
+            // fields" toast with nothing highlighted.
+            unmapped.push(messages.join(' '))
           }
         }
-        toast.error(entries.length > 0 ? 'Please fix the highlighted fields.' : error.message)
+
+        if (unmapped.length > 0) {
+          toast.error(unmapped.join(' '))
+        } else if (entries.length > 0) {
+          toast.error('Please fix the highlighted fields.')
+        } else {
+          toast.error(error.message)
+        }
       } else {
         toast.error('Something went wrong. Please try again.')
       }
@@ -168,6 +218,22 @@ export function EmployeeForm() {
 
   if (isLoading) {
     return <p className="py-20 text-center text-muted-foreground">Loading…</p>
+  }
+
+  if (loadError || !options) {
+    return (
+      <div className="py-20 text-center">
+        <p className="text-destructive">{loadError ?? 'Failed to load the form.'}</p>
+        <div className="mt-4 flex justify-center gap-2">
+          <Button variant="outline" onClick={() => void load()}>
+            Try again
+          </Button>
+          <Button variant="ghost" onClick={() => navigate('/employees')}>
+            Back to directory
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   return (

@@ -26,4 +26,20 @@ public static class EmployeeOptions
     ];
 
     public const int MinimumAgeYears = 18;
+
+    /// <summary>
+    /// Also applied as a <c>[RegularExpression]</c> on <c>EmployeeRequest.CountryCode</c>.
+    /// Served to the client so the form's schema can't quietly drift from the server's rule.
+    /// </summary>
+    public const string CountryCodePattern = @"^\+\d{1,4}$";
+
+    /// <summary>Field length caps, mirrored to the client so it can flag over-long input before a round trip.</summary>
+    public static readonly Dictionary<string, int> MaxLengths = new()
+    {
+        ["name"] = 120,
+        ["email"] = 200,
+        ["nationalId"] = 40,
+        ["phone"] = 30,
+        ["country"] = 80,
+    };
 }

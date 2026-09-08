@@ -28,7 +28,8 @@ Set up the TrainingAI repository structure, documentation, and reusable tooling 
 | 19 | Build Add/Edit Employee form screen | Done | `pages/EmployeeForm.tsx` — create + edit, zod validation mirroring API |
 | 20 | Build Delete Confirmation dialog | Done | `components/DeleteEmployeeDialog.tsx` — shadcn alert-dialog |
 | 21 | Wire frontend to API + verify end-to-end | Done | Verified in browser: list, create, edit, delete, 409 mapped to field |
-| 22 | Initial commit and push to GitHub (`origin/main`) | Pending | Will confirm with user before pushing |
+| 23 | Fix bugs found by code review (whitespace-bypassed uniqueness, timezone/leap-day date logic, untranslatable EF query, options drift, unrecoverable options-fetch failure) | Done | 22 backend tests passing; verified via curl + browser |
+| 22 | Initial commit and push to GitHub (`origin/main`) | Pending | Follow-up commit with bug fixes still needs to be pushed with the first |
 
 ## Status Legend
 - **Pending** — not started

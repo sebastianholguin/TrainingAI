@@ -155,6 +155,84 @@ public class EmployeesEndpointTests(EmployeeApiFactory factory) : IClassFixture<
     }
 
     [Fact]
+    public async Task Create_ReturnsBadRequest_WhenHiredBeforeTurning18()
+    {
+        var request = ValidRequest("20");
+        request.DateOfBirth = new DateOnly(2000, 1, 1);
+        request.HireDate = new DateOnly(2015, 6, 1); // age 15
+
+        var response = await _client.PostAsJsonAsync("/employees", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("before the employee turned", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Create_TreatsLeapDayBirthdaysTheSameWayDateOnlyDoes()
+    {
+        // DateOnly.AddYears clamps 2000-02-29 + 18y to 2018-02-28, so a hire on that day
+        // is valid. The frontend has to agree, hence pinning the behaviour here.
+        var request = ValidRequest("21");
+        request.DateOfBirth = new DateOnly(2000, 2, 29);
+        request.HireDate = new DateOnly(2018, 2, 28);
+
+        var response = await _client.PostAsJsonAsync("/employees", request);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Create_TrimsWhitespaceBeforeValidating()
+    {
+        var request = ValidRequest("22");
+        request.NationalId = "  12  "; // 6 chars padded, 2 once trimmed — below the minimum
+
+        var response = await _client.PostAsJsonAsync("/employees", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Create_ReturnsConflict_WhenDuplicateEmailIsPaddedWithWhitespace()
+    {
+        var first = ValidRequest("23");
+        await _client.PostAsJsonAsync("/employees", first);
+
+        var duplicate = ValidRequest("24");
+        duplicate.Email = $"  {first.Email}  ";
+
+        var response = await _client.PostAsJsonAsync("/employees", duplicate);
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Create_StoresTrimmedValues()
+    {
+        var request = ValidRequest("25");
+        request.Name = "  Padded Person  ";
+        request.Country = "  Peru  ";
+
+        var response = await _client.PostAsJsonAsync("/employees", request);
+
+        response.EnsureSuccessStatusCode();
+        var created = await response.Content.ReadFromJsonAsync<EmployeeResponse>();
+        Assert.Equal("Padded Person", created!.Name);
+        Assert.Equal("Peru", created.Country);
+    }
+
+    [Fact]
+    public async Task Create_ReturnsBadRequest_WhenNameExceedsMaxLength()
+    {
+        var request = ValidRequest("26");
+        request.Name = new string('a', 121);
+
+        var response = await _client.PostAsJsonAsync("/employees", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Update_ReplacesEmployeeAndReturnsOk()
     {
         var created = await CreateAsync("11");
@@ -213,7 +291,7 @@ public class EmployeesEndpointTests(EmployeeApiFactory factory) : IClassFixture<
     }
 
     [Fact]
-    public async Task Options_ReturnsGendersAndTitles()
+    public async Task Options_ReturnsGendersTitlesAndSharedValidationRules()
     {
         var response = await _client.GetAsync("/employee-options");
 
@@ -221,6 +299,12 @@ public class EmployeesEndpointTests(EmployeeApiFactory factory) : IClassFixture<
         var body = await response.Content.ReadAsStringAsync();
         Assert.Contains("Female", body);
         Assert.Contains("Frontend Lead", body);
+
+        // The client builds its validation schema from these, so their absence would
+        // silently downgrade the form rather than fail loudly.
+        Assert.Contains("minimumAgeYears", body);
+        Assert.Contains("countryCodePattern", body);
+        Assert.Contains("maxLengths", body);
     }
 
     private async Task<EmployeeResponse> CreateAsync(string suffix)

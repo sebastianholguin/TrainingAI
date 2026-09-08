@@ -14,9 +14,22 @@ export interface Employee {
 
 export type EmployeeInput = Omit<Employee, 'id'>
 
+/**
+ * Dropdown values and validation rules served by the API, so the form's schema is
+ * built from the server's rules instead of constants duplicated on the client.
+ */
 export interface EmployeeOptions {
   genders: string[]
   titles: string[]
+  minimumAgeYears: number
+  countryCodePattern: string
+  maxLengths: {
+    name: number
+    email: number
+    nationalId: number
+    phone: number
+    country: number
+  }
 }
 
 /**

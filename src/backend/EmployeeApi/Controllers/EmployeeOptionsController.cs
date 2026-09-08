@@ -15,6 +15,9 @@ public class EmployeeOptionsController : ControllerBase
     public ActionResult<object> Get() => Ok(new
     {
         genders = EmployeeOptions.Genders,
-        titles = EmployeeOptions.Titles
+        titles = EmployeeOptions.Titles,
+        minimumAgeYears = EmployeeOptions.MinimumAgeYears,
+        countryCodePattern = EmployeeOptions.CountryCodePattern,
+        maxLengths = EmployeeOptions.MaxLengths
     });
 }

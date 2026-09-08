@@ -12,5 +12,9 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    // The API's CORS policy allowlists exactly this origin. Without strictPort, an occupied
+    // 5173 sends Vite to 5174 and every request fails preflight, which surfaces as a
+    // "cannot reach the API" error pointing at the wrong process.
+    strictPort: true,
   },
 })

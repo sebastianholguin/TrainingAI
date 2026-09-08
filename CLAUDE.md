@@ -69,6 +69,10 @@ cd src/frontend && npm run build
 
 The frontend expects the API at `http://localhost:5080` (override with `VITE_API_URL`), and the API's CORS policy allows `http://localhost:5173`. Both need to be running for the UI to load data.
 
+## Before changing build config
+
+[docs/stack-notes.md](docs/stack-notes.md) records the setup decisions that look arbitrary but aren't — a pinned package version that prevents a compile error, a TypeScript setting that forbids idiomatic syntax, a test-isolation constraint that makes count assertions flaky. Read it before upgrading packages or editing `tsconfig`/`vite.config`/`.csproj`, and add to it whenever you lose time to a non-obvious build failure.
+
 ## Backend conventions
 
 - Nullable reference types enabled; treat warnings as signal.
