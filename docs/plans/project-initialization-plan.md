@@ -29,7 +29,8 @@ Set up the TrainingAI repository structure, documentation, and reusable tooling 
 | 20 | Build Delete Confirmation dialog | Done | `components/DeleteEmployeeDialog.tsx` — shadcn alert-dialog |
 | 21 | Wire frontend to API + verify end-to-end | Done | Verified in browser: list, create, edit, delete, 409 mapped to field |
 | 23 | Fix bugs found by code review (whitespace-bypassed uniqueness, timezone/leap-day date logic, untranslatable EF query, options drift, unrecoverable options-fetch failure) | Done | 22 backend tests passing; verified via curl + browser |
-| 22 | Initial commit and push to GitHub (`origin/main`) | Pending | Follow-up commit with bug fixes still needs to be pushed with the first |
+| 24 | Add `pr-prep` skill and a push/PR-gating test hook | Done | `.claude/hooks/require-tests-before-push.sh`; verified both allow and block paths |
+| 22 | Initial commit and push to GitHub (`origin/main`) | Pending | 3 local commits (`e92f736`, `f3bd80b`, `92bc51d`) ready to push |
 
 ## Status Legend
 - **Pending** — not started
