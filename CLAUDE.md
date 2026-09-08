@@ -41,6 +41,10 @@ When sources conflict, resolve in this order — and if a real conflict appears,
 
 Mockups govern *how it looks*; the spec governs *what the rules are*. A mockup that omits a field the spec requires is an incomplete mockup, not a decision to drop the field.
 
+## Pushing and PRs
+
+A project hook ([.claude/hooks/require-tests-before-push.sh](.claude/hooks/require-tests-before-push.sh)) re-runs `dotnet test` and `npm run build` on every `git push` and `gh pr create` and blocks the command if either fails — it does not trust a cached result or a "Done" status in the plan file, since either can go stale the moment a line changes afterward. Plain `git commit` is intentionally left ungated so local commits stay fast. Use the `pr-prep` skill to draft a PR title/description before opening one.
+
 ## Working rules
 
 **Never invent requirements.** If a field, endpoint, screen, validation rule, or technology choice isn't in the spec, the mockups, or something the user said — ask. A plausible-sounding guess is worse than a question, because it will be trusted and built on.
