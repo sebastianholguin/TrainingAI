@@ -30,7 +30,7 @@ Set up the TrainingAI repository structure, documentation, and reusable tooling 
 | 21 | Wire frontend to API + verify end-to-end | Done | Verified in browser: list, create, edit, delete, 409 mapped to field |
 | 23 | Fix bugs found by code review (whitespace-bypassed uniqueness, timezone/leap-day date logic, untranslatable EF query, options drift, unrecoverable options-fetch failure) | Done | 22 backend tests passing; verified via curl + browser |
 | 24 | Add `pr-prep` skill and a push/PR-gating test hook | Done | `.claude/hooks/require-tests-before-push.sh`; verified both allow and block paths |
-| 22 | Initial commit and push to GitHub (`origin/main`) | Blocked | 5 commits ready, verified green (22/22 tests, clean build). `git push` fails with "could not read Username for https://github.com" — no `gh` CLI, no SSH key, no stored keychain credential. Needs the user to authenticate before this can complete |
+| 22 | Initial commit and push to GitHub (`origin/main`) | Done | 6 commits pushed (`e92f736`..`7343100`); `main` tracks `origin/main`. Verified green before pushing: 22/22 tests, clean build |
 
 ## Status Legend
 - **Pending** — not started
