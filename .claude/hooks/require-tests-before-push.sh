@@ -11,7 +11,26 @@ command="$(printf '%s' "$input" | jq -r '.tool_input.command // empty')"
 
 # Only gate the two commands that send code somewhere else. Anything else (including
 # git commit, git status, git diff, etc.) passes through untouched.
-if ! printf '%s' "$command" | grep -q 'git push' && ! printf '%s' "$command" | grep -q 'gh pr create'; then
+#
+# Matched by WORD, not by fixed adjacent phrase — a literal `grep -q 'git push'` misses
+# `git -C <dir> push ...`, `git --no-pager push ...`, or any other flag wedged between
+# the two words, which is exactly how this hook first failed to fire (the Bash tool's
+# cwd had changed, so Claude ran `git -C /project push --dry-run ...`). Matching "git"
+# and "push" as independent tokens anywhere in the command catches all of those. This
+# can over-match (e.g. a commit message containing the standalone word "push") but
+# never under-match in the way that mattered — a false positive here just costs one
+# extra test run, where a false negative would silently skip the safety check entirely.
+has_word() {
+  printf '%s' "$command" | grep -qE "(^|[^[:alnum:]_])$1([^[:alnum:]_]|\$)"
+}
+
+is_git_push=false
+has_word git && has_word push && is_git_push=true
+
+is_gh_pr_create=false
+has_word gh && has_word pr && has_word create && is_gh_pr_create=true
+
+if ! $is_git_push && ! $is_gh_pr_create; then
   exit 0
 fi
 
