@@ -30,7 +30,7 @@ Set up the TrainingAI repository structure, documentation, and reusable tooling 
 | 21 | Wire frontend to API + verify end-to-end | Done | Verified in browser: list, create, edit, delete, 409 mapped to field |
 | 23 | Fix bugs found by code review (whitespace-bypassed uniqueness, timezone/leap-day date logic, untranslatable EF query, options drift, unrecoverable options-fetch failure) | Done | 22 backend tests passing; verified via curl + browser |
 | 24 | Add `pr-prep` skill and a push/PR-gating test hook | Done | `.claude/hooks/require-tests-before-push.sh`; verified both allow and block paths |
-| 22 | Initial commit and push to GitHub (`origin/main`) | Done | 6 commits pushed (`e92f736`..`7343100`); `main` tracks `origin/main`. Verified green before pushing: 22/22 tests, clean build |
+| 22 | Initial commit and push to GitHub (`origin/main`) | Done | 7 commits pushed (`e92f736`..`d43534b`); `main` tracks `origin/main`, fully in sync. Last one (`d43534b`) fixed a real gap in the push-gating hook — its word-boundary matching now catches `git -C <dir> push ...`, which the original fixed-phrase match missed. Verified green before pushing: 22/22 tests, clean build |
 
 ## Status Legend
 - **Pending** — not started
