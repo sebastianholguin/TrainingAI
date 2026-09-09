@@ -30,22 +30,33 @@ A PR description written well answers "why" for a reviewer who has no context �
 
 ```markdown
 ## Summary
-1-3 bullet points: what changed and why. Lead with why if the why isn't obvious from
-the diff alone — "why" is what a diff can't tell a reviewer on its own.
+1-3 bullet points, ONE line each: what changed and why. Lead with why if the why isn't
+obvious from the diff alone — "why" is what a diff can't tell a reviewer on its own.
 
 ## Changes
-Grouped by concern if the branch touches multiple areas (e.g. "Backend:", "Frontend:",
-"Docs:") — a flat list of every file is not a summary. Mention anything a reviewer
-would otherwise have to dig for: a renamed public API, a changed default, a migration.
+Only include this section if the branch touches more than one distinct area AND the
+grouping itself is information a reviewer needs (where to look, not what every file
+does). One line per area (e.g. "**Backend:** ..." / "**Frontend:** ..."), not a
+paragraph per area. Omit the section entirely for a small or single-concern PR — the
+diff already shows the files.
 
 ## Test plan
-Checklist format (`- [ ]`), concrete and checkable:
+Checklist format (`- [ ]`), one line per item, concrete and checkable:
 - Tests added/updated, and what they cover
 - Manual verification steps actually performed (not just "should work")
 - Anything explicitly NOT tested and why (e.g. "no test for the UI drag-and-drop path — needs manual QA")
 ```
 
 Keep the title under ~70 characters, imperative mood ("Add employee delete confirmation", not "Added" or "Adding"). The description's job is to let a reviewer approve confidently without re-deriving your reasoning from the diff — write it as if you're handing off to someone who wasn't in the room.
+
+## Default to short
+
+The structure above is a ceiling, not a target — most PRs should use less of it. A reviewer opens dozens of these; the description's job is to get them oriented in the time it takes to scroll past it, not to be a complete changelog. Concretely:
+
+- **One line per bullet, no exceptions.** If a bullet needs a second sentence to make sense, the point is more complex than a bullet — either simplify it or it belongs in a code comment near the change, not the PR description.
+- **Skip a section outright rather than write a thin version of it.** A one-item "Changes" section that just repeats the title adds scrolling, not information — cut it. Only "Summary" and "Test plan" are close to mandatory; even those can shrink to a single line each for a small, self-explanatory change (e.g. a one-file typo fix needs "Fixes a typo in the README" and "- [x] Read the diff, it's a one-word change" — nothing more).
+- **Total length should track the size of the change, not the size of the session that produced it.** A PR built across a long conversation with lots of back-and-forth does not need a longer description than the same diff would if it had been written in one pass — the description reflects what's shipping, not how the work happened. Before finalizing, count the bullets: more than ~6 across the whole description is a signal to cut, not a signal the change was thorough.
+- **Don't narrate the development process** ("first we tried X, then discovered Y, then fixed Z") unless a specific dead end is exactly the thing a reviewer needs to know to avoid re-suggesting it. The description documents what's shipping, not the journey.
 
 ## What NOT to do
 
